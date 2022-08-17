@@ -5,6 +5,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png">
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png">
+
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="style.css">
+
     <title>Perros y Gatos (modified by Erick Escamilla C.)</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-EVSTQN3/azprG1Anm3QDgpJLIm9Nao0Yz1ztcQTwFspd3yD65VohhpuuCOmLASjC" crossorigin="anonymous">
@@ -46,6 +51,28 @@
 
       <div class="b-example-divider"></div>
 
+      <div>
+        <label for="imageFiles">Seleccione las IMÁGENES a Clasificar (Perros / Gatos): </label>
+        <input type="file" id="imageFiles" multiple="multiple" accept="image/jpeg, image/png, image/jpg">
+        <output id="resultadoImagenes">
+      </div>
+
+      <div id="divTestCanvasTmp">
+        <canvas id="canvasV2" width="400" height="400" style="max-width: 100%;"></canvas>
+        <p><strong></strong></p>
+        <canvas id="otrocanvasV2" width="150" height="150" style="display: none"></canvas>
+      </div>
+
+      <div>
+        <button id="btnClasificarImgs">CLASIFICAR Imagenes</button>
+      </div>
+
+      <div id="divTestCanvasTmpV3">
+        <canvas id="canvasV3" width="400" height="400" style="max-width: 100%;"></canvas>
+        <p><strong></strong></p>
+        <canvas id="otrocanvasV3" width="150" height="150" style="display: none"></canvas>
+      </div>
+
       <div class="bg-dark text-secondary mt-5 px-4 py-2 text-center">
         <div class="py-5">
           <h1 class="display-5 fw-bold text-white">Ringa Tech</h1>
@@ -68,6 +95,10 @@
     var video = document.getElementById("video");
     var canvas = document.getElementById("canvas");
     var otrocanvas = document.getElementById("otrocanvas");
+
+    // var canvas = document.getElementById("canvas");
+    // var otrocanvas = document.getElementById("otrocanvas");
+
     var ctx = canvas.getContext("2d");
     var currentStream = null;
     var facingMode = "user";
@@ -142,6 +173,138 @@
       setTimeout(procesarCamara, 20);
     }
 
+    function predecirV2(){
+      console.log( 'funcion predecirV2()...' );
+      if (modelo != null) {
+        console.log( '[predecirV2()] -- [modelo] NOT null...' );
+        // del [canvas] 'Original' a [otrocanvas] 'más pequeño' (100 x 100) :: para
+        // que coincida con el TAMANIO de la Imagen en el Entrenamiento
+        // del modelo (python) -- Google colab...
+        console.log( '[predecirV2()] -- canvasV2 :: ' );
+        console.log( canvasV2 );
+        console.log( '[predecirV2()] -- otrocanvasV2 :: ' );
+        console.log( otrocanvasV2 );
+
+        resample_single(canvasV2, 100, 100, otrocanvasV2);
+
+        //Hacer la predicción
+        var ctx2V2 = otrocanvasV2.getContext("2d");
+        // imgData EXTRAIDA a partir de [otrocanvas] es la
+        // DATA que será utilizada como 'Input' de TEST para el [modelo]
+        var imgDataV2 = ctx2V2.getImageData(0,0, 100, 100);
+        console.log( "[predecirV2()] -- typeof imgDataV2" );
+        // imgData :: object
+        console.log( typeof imgDataV2 );
+
+        var arrV2 = [];
+        var arr100V2 = [];
+
+        for (var p=0; p < imgDataV2.data.length; p+= 4) {
+          var rojo = imgDataV2.data[p] / 255;
+          var verde = imgDataV2.data[p+1] / 255;
+          var azul = imgDataV2.data[p+2] / 255;
+
+          var gris = (rojo+verde+azul)/3;
+
+          // datos de la Imagen en Escala de Grises...
+          arr100V2.push([gris]);
+          if (arr100V2.length == 100) {
+            arrV2.push(arr100V2);
+            arr100V2 = [];
+          }
+        }
+
+        arrV2 = [arrV2];
+
+        var tensor = tf.tensor4d(arrV2);
+        var resultado = modelo.predict(tensor).dataSync();
+
+        var respuesta;
+
+        console.log( '[predecirV2()] -- resultado' );
+        console.log( resultado );        
+
+        if (resultado <= .5) {
+          respuesta = "Gato";
+        } else {
+          respuesta = "Perro";
+        }
+
+        console.log( '[predecirV2()] -- respuesta' );
+        console.log( respuesta );
+
+        return respuesta;
+        // document.getElementById("resultado").innerHTML = respuesta;
+
+      } //--FIN: if [modelo NOT null]
+    } //-- fin: funcion predecirV2()
+
+    function predecirV3(){
+      console.log( 'funcion predecirV3()...' );
+      if (modelo != null) {
+        console.log( '[predecirV3()] -- [modelo] NOT null...' );
+        // del [canvas] 'Original' a [otrocanvas] 'más pequeño' (100 x 100) :: para
+        // que coincida con el TAMANIO de la Imagen en el Entrenamiento
+        // del modelo (python) -- Google colab...
+        console.log( '[predecirV3()] -- canvasV3 :: ' );
+        console.log( canvasV3 );
+        console.log( '[predecirV3()] -- otrocanvasV3 :: ' );
+        console.log( otrocanvasV3 );
+
+        resample_single(canvasV3, 100, 100, otrocanvasV3);
+
+        //Hacer la predicción
+        var ctx2V3 = otrocanvasV3.getContext("2d");
+        // imgData EXTRAIDA a partir de [otrocanvas] es la
+        // DATA que será utilizada como 'Input' de TEST para el [modelo]
+        var imgDataV3 = ctx2V3.getImageData(0,0, 100, 100);
+        console.log( "[predecirV3()] -- typeof imgDataV3" );
+        // imgData :: object
+        console.log( typeof imgDataV3 );
+
+        var arrV3 = [];
+        var arr100V3 = [];
+
+        for (var p=0; p < imgDataV3.data.length; p+= 4) {
+          var rojo = imgDataV3.data[p] / 255;
+          var verde = imgDataV3.data[p+1] / 255;
+          var azul = imgDataV3.data[p+2] / 255;
+
+          var gris = (rojo+verde+azul)/3;
+
+          // datos de la Imagen en Escala de Grises...
+          arr100V3.push([gris]);
+          if (arr100V3.length == 100) {
+            arrV3.push(arr100V3);
+            arr100V3 = [];
+          }
+        }
+
+        arrV3 = [arrV3];
+
+        var tensor = tf.tensor4d(arrV3);
+        var resultado = modelo.predict(tensor).dataSync();
+
+        var respuesta;
+
+        console.log( '[predecirV3()] -- resultado' );
+        console.log( resultado );        
+
+        if (resultado <= .5) {
+          respuesta = "Gato";
+        } else {
+          respuesta = "Perro";
+        }
+
+        console.log( '[predecirV3()] -- respuesta' );
+        console.log( respuesta );
+
+        return respuesta;
+        // document.getElementById("resultado").innerHTML = respuesta;
+
+      } //--FIN: if [modelo NOT null]
+    } //-- fin: funcion predecirV2()
+
     function predecir() {
       console.log( 'dentro de la funcion predecir() JS...' );
       if (modelo != null) {
@@ -185,18 +348,24 @@
 
         var respuesta;
 
-        
+        console.log( 'resultado' );
+        console.log( resultado );        
 
         if (resultado <= .5) {
           respuesta = "Gato";
         } else {
           respuesta = "Perro";
         }
+
+        console.log( 'respuesta' );
+        console.log( respuesta );
+
         document.getElementById("resultado").innerHTML = respuesta;
 
-      }
+      } //--FIN: if [modelo NOT null]
 
-      setTimeout(predecir, 150);
+      // setTimeout(predecir, 150);
+      setTimeout(predecir, 16000);
     }
 
     /**
@@ -278,5 +447,8 @@
           ctx2.putImageData(img2, 0, 0);
       }
   </script>
+
+  <script src="erick-app.js"></script>
+
   </body>
 </html>
